@@ -59,12 +59,12 @@ FamixMMUMLDocumentor >> externalClasses: aCollection [
 
 { #category : #generating }
 FamixMMUMLDocumentor >> generateClassName: aFM3Class [
-	outputStream
-		nextPutAll: aFM3Class name.
+	(self isTrait: aFM3Class)
+		ifTrue: [ outputStream nextPutAll: 'trait.' ]
+		ifFalse: [ outputStream nextPutAll: 'class.' ].
+	outputStream nextPutAll: aFM3Class name.
 	(self ofInterest: aFM3Class)
-	ifFalse: [
-		externalClasses add: aFM3Class 
-	]
+		ifFalse: [ externalClasses add: aFM3Class ]
 ]
 
 { #category : #generating }
@@ -98,6 +98,20 @@ FamixMMUMLDocumentor >> generatePlantUML: aCollection onStream: aStream [
 	outputStream cr.
 	self plantUMLFooter.
 
+]
+
+{ #category : #generating }
+FamixMMUMLDocumentor >> generatePlantUMLClassOpen: aFMClass [
+	outputStream
+		nextPutAll: 'class '.
+	self generateClassName: aFMClass.
+	outputStream
+		nextPutAll: ' << (';
+		nextPutAll: (self plantUMLMarkerFor: aFMClass);
+		nextPut: $,;
+		nextPutAll: (self plantUMLColorFor: aFMClass);
+		nextPutAll: ') >> {';
+		cr
 ]
 
 { #category : #generating }
@@ -302,20 +316,11 @@ FamixMMUMLDocumentor >> relationEndOfInterest: aFMClass [
 
 { #category : #visiting }
 FamixMMUMLDocumentor >> visitClass: aFMClass [
+	self generatePlantUMLClassOpen: aFMClass.
+	aFMClass primitiveProperties do: [ :prop | prop accept: self ].
 	outputStream
-		nextPutAll: 'class ' ;
-		nextPutAll: aFMClass name ;
-		nextPutAll: ' << (' ;
-		nextPutAll: (self plantUMLMarkerFor: aFMClass) ;
-		nextPut: $, ;
-		nextPutAll: (self plantUMLColorFor: aFMClass) ;
-		nextPutAll: ') >> {' ;
-		cr.
-	aFMClass
-		primitiveProperties do: [ :prop | prop accept: self ].
-	outputStream
-		nextPutAll: '}' ;
-		cr.
+		nextPutAll: '}';
+		cr
 ]
 
 { #category : #visiting }
@@ -332,11 +337,14 @@ FamixMMUMLDocumentor >> visitClassRelations: aFMClass [
 
 { #category : #visiting }
 FamixMMUMLDocumentor >> visitInheritance: aFMSuperClass sub: aFMSubClass [
-	(self relationEndOfInterest: aFMSuperClass) ifFalse: [ ^ self ].
-	(self relationEndOfInterest: aFMSubClass) ifFalse: [ ^ self ].
-
+	(self relationEndOfInterest: aFMSuperClass)
+		ifFalse: [ ^ self ].
+	(self relationEndOfInterest: aFMSubClass)
+		ifFalse: [ ^ self ].
 	self generateClassName: aFMSuperClass.
-	outputStream nextPutAll: ' <|-- '.
+	(self isTrait: aFMSuperClass)
+		ifTrue: [ outputStream nextPutAll: ' <|.. ' ]
+		ifFalse: [ outputStream nextPutAll: ' <|-- ' ].
 	self generateClassName: aFMSubClass.
 	outputStream cr
 ]
